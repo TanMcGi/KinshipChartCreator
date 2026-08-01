@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kinship Chart Builder</title>
+<style>
+  :root{
+    --bg:#f4f5f7; --panel:#ffffff; --ink:#1f2933; --muted:#6b7280;
+    --line:#334155; --accent:#2563eb; --accent-soft:#dbeafe;
+    --grid:#e3e6ea; --border:#d7dbe0; --danger:#dc2626;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--bg)}
+  #app{display:flex;flex-direction:column;height:100vh}
+  header{display:flex;align-items:center;gap:14px;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--border);flex-wrap:wrap}
+  header h1{font-size:16px;margin:0;font-weight:650;letter-spacing:.2px}
+  header .sub{font-size:12px;color:var(--muted)}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto;align-items:center}
+  button.tb{border:1px solid var(--border);background:#fff;color:var(--ink);padding:7px 11px;border-radius:8px;font-size:13px;cursor:pointer;line-height:1;display:inline-flex;align-items:center;gap:6px}
+  button.tb:hover{background:#f0f2f5}
+  button.tb.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  button.tb.primary:hover{filter:brightness(1.05)}
+  button.tb.danger{color:var(--danger);border-color:#f0c2c2}
+  button.tb.danger:hover{background:#fdecec}
+  .main{flex:1;display:flex;min-height:0}
+  .sidebar{width:210px;background:var(--panel);border-right:1px solid var(--border);padding:14px;overflow:auto}
+  .sidebar h2{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin:0 0 8px}
+  .sidebar .section{margin-bottom:20px}
+  .palette{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .chip{border:1px solid var(--border);border-radius:9px;background:#fff;padding:8px 4px 6px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:grab;user-select:none}
+  .chip:hover{border-color:var(--accent);background:#f7faff}
+  .chip:active{cursor:grabbing}
+  .chip svg{pointer-events:none}
+  .chip span{font-size:10.5px;color:var(--muted);text-align:center;line-height:1.15}
+  .rel-list{display:flex;flex-direction:column;gap:6px}
+  .rel-btn{border:1px solid var(--border);border-radius:8px;background:#fff;padding:8px 10px;font-size:12.5px;cursor:pointer;text-align:left;display:flex;align-items:center;gap:9px}
+  .rel-btn:hover{background:#f7faff;border-color:var(--accent)}
+  .rel-btn.active{background:var(--accent-soft);border-color:var(--accent);color:#1e3a8a;font-weight:600}
+  .rel-btn .hotkey{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10.5px;color:var(--muted);border:1px solid var(--border);border-radius:4px;padding:1px 5px;background:#f7f8fa;line-height:1.4}
+  .rel-btn.active .hotkey{border-color:var(--accent);color:#1e3a8a}
+  .color-row{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+  .color-row input[type=color]{width:26px;height:26px;padding:0;border:1px solid var(--border);border-radius:6px;background:none;cursor:pointer;flex:0 0 26px}
+  .color-row input[type=text]{flex:1;min-width:0;border:1px solid var(--border);border-radius:6px;padding:5px 7px;font-size:12.5px;font-family:inherit;outline:none}
+  .color-row input[type=text]:focus{border-color:var(--accent)}
+  .color-row .del{border:none;background:none;color:var(--muted);cursor:pointer;font-size:15px;line-height:1;padding:2px 4px;border-radius:4px;flex:0 0 auto}
+  .color-row .del:hover{color:var(--danger);background:#fdecec}
+  .swatch-strip{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+  .swatch{width:24px;height:24px;border-radius:6px;border:1px solid rgba(0,0,0,.2);cursor:pointer;position:relative}
+  .swatch:hover{outline:2px solid var(--accent);outline-offset:1px}
+  .swatch.none{background:#fff}
+  .swatch.none::after{content:"";position:absolute;left:2px;right:2px;top:50%;height:1.5px;background:var(--danger);transform:rotate(-45deg)}
+  .ctx-menu{position:fixed;z-index:1000;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.18);padding:5px;min-width:190px;max-height:340px;overflow-y:auto;font-size:13px}
+  .ctx-menu .mi{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:6px;cursor:pointer;color:var(--ink);white-space:nowrap}
+  .ctx-menu .mi:hover{background:#f0f2f5}
+  .ctx-menu .mi.danger{color:var(--danger)}
+  .ctx-menu .mi.danger:hover{background:#fdecec}
+  .ctx-menu .sep{height:1px;background:var(--border);margin:5px 4px}
+  .ctx-menu .hdr{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);padding:6px 10px 2px}
+  .ctx-menu .sw{width:16px;height:16px;border-radius:4px;border:1px solid rgba(0,0,0,.25);flex:0 0 16px}
+  .ctx-menu .sw.none{background:#fff;position:relative}
+  .ctx-menu .sw.none::after{content:"";position:absolute;left:1px;right:1px;top:50%;height:1.5px;background:var(--danger);transform:rotate(-45deg)}
+  .rel-btn .glyph{width:34px;height:0;position:relative;flex:0 0 34px}
+  .canvas-wrap{flex:1;position:relative;overflow:hidden;background:#fff;touch-action:none}
+  .canvas-wrap.panning{cursor:grabbing}
+  #canvas{display:block;background:#fff;width:100%;height:100%}
+  .node-label-input{position:absolute;z-index:20;border:1px solid var(--accent);border-radius:4px;padding:2px 5px;font-size:13px;font-family:inherit;outline:none;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+  .hint{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);background:rgba(31,41,51,.86);color:#fff;font-size:12px;padding:7px 13px;border-radius:20px;pointer-events:none;opacity:0;transition:opacity .25s;white-space:nowrap;z-index:30}
+  .hint.show{opacity:1}
+  footer{padding:6px 16px;background:var(--panel);border-top:1px solid var(--border);font-size:11.5px;color:var(--muted);display:flex;gap:18px;flex-wrap:wrap}
+  .kv{display:flex;align-items:center;gap:6px}
+  .toggle{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--ink);cursor:pointer}
+  .toggle input{accent-color:var(--accent)}
+  .selected-outline{outline:none}
+  .node.selected .selbox{display:block}
+  .selbox{display:none}
+  svg text{user-select:none}
+  .connect-mode #canvas{cursor:crosshair}
+  .modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.45);display:none;align-items:center;justify-content:center;z-index:2000;padding:24px}
+  .modal-overlay.open{display:flex}
+  .modal{background:#fff;border-radius:14px;max-width:660px;width:100%;max-height:86vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+  .modal .mhead{display:flex;align-items:center;justify-content:space-between;padding:15px 20px;border-bottom:1px solid var(--border)}
+  .modal .mhead h2{margin:0;font-size:17px}
+  .modal .mclose{border:none;background:none;font-size:22px;line-height:1;cursor:pointer;color:var(--muted);padding:2px 9px;border-radius:6px}
+  .modal .mclose:hover{background:#f0f2f5;color:var(--ink)}
+  .modal .mbody{padding:14px 22px 22px;overflow-y:auto}
+  .modal h3{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin:18px 0 6px}
+  .modal h3:first-child{margin-top:2px}
+  .modal .row{display:flex;gap:14px;padding:5px 0;font-size:13.5px;align-items:baseline;border-top:1px solid #f1f3f5}
+  .modal .row .k{flex:0 0 178px;color:var(--ink);font-weight:600}
+  .modal .row .v{flex:1;color:#374151;line-height:1.4}
+  .modal kbd{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;background:#f1f3f5;border:1px solid var(--border);border-radius:4px;padding:1px 5px;white-space:nowrap}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div>
+      <h1>Kinship Chart Builder</h1>
+      <div class="sub">Drag symbols onto the grid · double-click to name · right-click for slash/color/delete · Shift+click to multi-select · Shift+drag person→person = marriage · Shift+drag a union line→person = child</div>
+    </div>
+    <div class="toolbar">
+      <button class="tb" id="btnHelp" title="Instructions &amp; controls">? Instructions</button>
+      <label class="toggle"><input type="checkbox" id="snapToggle" checked> Snap to grid</label>
+      <label class="toggle"><input type="checkbox" id="gridToggle" checked> Show grid</label>
+      <button class="tb" id="btnSample">Load sample</button>
+      <button class="tb" id="btnSaveJson">Save JSON</button>
+      <button class="tb" id="btnLoadJson">Load JSON</button>
+      <button class="tb danger" id="btnClear">Clear</button>
+      <label class="toggle"><input type="checkbox" id="legendToggle" checked> Legend in PNG</label>
+      <button class="tb primary" id="btnPng">Export PNG</button>
+    </div>
+  </header>
+
+  <div class="main">
+    <aside class="sidebar">
+      <div class="section">
+        <h2>People</h2>
+        <div class="palette" id="palette"></div>
+      </div>
+      <div class="section">
+        <h2>Relationships</h2>
+        <div class="rel-list" id="relList"></div>
+      </div>
+      <div class="section">
+        <h2>Colors</h2>
+        <div id="colorList"></div>
+        <button class="tb" id="btnAddColor" style="width:100%;margin-top:6px;justify-content:center">+ Add color</button>
+        <div style="font-size:10.5px;color:var(--muted);margin-top:6px">Select people, then click a swatch to apply.</div>
+      </div>
+      <div class="section">
+        <h2>Selected</h2>
+        <div id="selPanel" style="font-size:12.5px;color:var(--muted)">Nothing selected.</div>
+      </div>
+    </aside>
+
+    <div class="canvas-wrap" id="canvasWrap">
+      <svg id="canvas" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div class="hint" id="hint"></div>
+    </div>
+  </div>
+
+  <footer>
+    <span class="kv">Grid: <b id="gridSizeLabel">24px</b></span>
+    <span class="kv">People: <b id="countNodes">0</b></span>
+    <span class="kv">Links: <b id="countEdges">0</b></span>
+    <span class="kv" style="margin-left:auto">Right-drag to pan · wheel to zoom · <b>Space</b> center · <b>Enter</b> fit · left-drag empty = box-select · <b>Delete</b> removes</span>
+  </footer>
+</div>
+
+<input type="file" id="fileInput" accept="application/json,.json" style="display:none">
+
+<div class="modal-overlay" id="helpModal">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Instructions and controls">
+    <div class="mhead">
+      <h2>How to use the Kinship Chart Builder</h2>
+      <button class="mclose" id="helpClose" title="Close" aria-label="Close">×</button>
+    </div>
+    <div class="mbody">
+      <h3>Adding people</h3>
+      <div class="row"><div class="k">Add a person</div><div class="v">Drag a symbol from the <b>People</b> palette onto the canvas. It snaps to the grid. Triangle = male, circle = female, square = unknown sex.</div></div>
+      <div class="row"><div class="k">Name a person</div><div class="v">Double-click a symbol and type their name.</div></div>
+      <div class="row"><div class="k">Deceased</div><div class="v">Right-click a person → <b>Add deceased slash</b> (a diagonal line through the symbol).</div></div>
+      <div class="row"><div class="k">Default shape color</div><div class="v">Right-click a symbol in the palette to set a default fill for every new person of that type.</div></div>
+
+      <h3>Relationships</h3>
+      <div class="row"><div class="k">Using the buttons</div><div class="v">Click a relationship (or press <kbd>M</kbd> marriage, <kbd>P</kbd> partnership), then click the two people. For <b>Parent → child</b>, click the couple's union line (or a single parent), then the child.</div></div>
+      <div class="row"><div class="k">Shift-drag to connect</div><div class="v"><kbd>Shift</kbd>+drag one person onto another = marriage. <kbd>Shift</kbd>+drag a union line onto a person = child.</div></div>
+      <div class="row"><div class="k">Shift-drag to empty</div><div class="v"><kbd>Shift</kbd>+drag to blank space and pick a shape — it's created there and connected (spouse from a person, child from a union line).</div></div>
+      <div class="row"><div class="k">Divorce</div><div class="v">Right-click a marriage line → <b>Add divorce slash</b> (double line with a slash).</div></div>
+      <div class="row"><div class="k">Delete a link</div><div class="v">Right-click any line → <b>Delete link</b>.</div></div>
+
+      <h3>Selecting &amp; moving</h3>
+      <div class="row"><div class="k">Select</div><div class="v">Left-click a person or line. <kbd>Shift</kbd>+click adds/removes a person from the selection.</div></div>
+      <div class="row"><div class="k">Box-select</div><div class="v">Left-drag across empty space to select everyone inside the box.</div></div>
+      <div class="row"><div class="k">Move</div><div class="v">Drag a selected person; a multi-selection moves together. Connector lines follow.</div></div>
+      <div class="row"><div class="k">Delete</div><div class="v">Press <kbd>Delete</kbd> / <kbd>Backspace</kbd>. <kbd>Esc</kbd> cancels linking or clears the selection.</div></div>
+
+      <h3>Colors &amp; legend</h3>
+      <div class="row"><div class="k">Define colors</div><div class="v">In the <b>Colors</b> panel, add color + label rows. The <kbd>×</kbd> removes one (it asks first if that color is in use).</div></div>
+      <div class="row"><div class="k">Apply a color</div><div class="v">Select one or more people, then click a swatch in the <b>Selected</b> panel — or right-click a person and choose a color.</div></div>
+      <div class="row"><div class="k">Legend</div><div class="v">Turn on <b>Legend in PNG</b> to include a key in the export. It lists only the symbols, lines, and colors you actually used.</div></div>
+
+      <h3>Navigating the canvas</h3>
+      <div class="row"><div class="k">Pan</div><div class="v">Right-click and drag on empty space.</div></div>
+      <div class="row"><div class="k">Zoom</div><div class="v">Scroll wheel (zooms toward the cursor).</div></div>
+      <div class="row"><div class="k">Center / Fit</div><div class="v"><kbd>Space</kbd> centers the view on your chart; <kbd>Enter</kbd> zooms to fit everything.</div></div>
+
+      <h3>Saving &amp; exporting</h3>
+      <div class="row"><div class="k">Keep editing later</div><div class="v"><b>Save JSON</b> downloads the whole chart; <b>Load JSON</b> restores it (colors and defaults included).</div></div>
+      <div class="row"><div class="k">Export image</div><div class="v"><b>Export PNG</b> saves a high-resolution image cropped to your chart, with the legend if enabled.</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  const SVGNS="http://www.w3.org/2000/svg";
+  const GRID=24;
+  const NODE=54;            // symbol box size
+
+  const svg=document.getElementById("canvas");
+  const wrap=document.getElementById("canvasWrap");
+  const hint=document.getElementById("hint");
+
+  document.getElementById("gridSizeLabel").textContent=GRID+"px";
+
+  // ---------- camera (infinite pan/zoom) ----------
+  const cam={x:-40,y:-40,scale:1};      // world coord at top-left of viewport, plus zoom
+  const MIN_SCALE=0.15, MAX_SCALE=4;
+  function viewSize(){ return {w:(wrap.clientWidth||1)/cam.scale, h:(wrap.clientHeight||1)/cam.scale}; }
+  function applyCamera(){
+    const vs=viewSize();
+    svg.setAttribute("viewBox", cam.x+" "+cam.y+" "+vs.w+" "+vs.h);
+    // grow the background + grid rects to always cover the visible area
+    const bgr=svg.querySelector("#bgRect"), gr=svg.querySelector("#gridRect");
+    [bgr,gr].forEach(el=>{ if(el){ el.setAttribute("x",cam.x); el.setAttribute("y",cam.y); el.setAttribute("width",vs.w); el.setAttribute("height",vs.h); } });
+  }
+  function contentBBox(){
+    if(!nodes.length) return null;
+    let a=Infinity,b=Infinity,c=-Infinity,d=-Infinity;
+    nodes.forEach(n=>{ a=Math.min(a,n.x-NODE); b=Math.min(b,n.y-NODE); c=Math.max(c,n.x+NODE); d=Math.max(d,n.y+NODE+22); });
+    return {minX:a,minY:b,maxX:c,maxY:d,cx:(a+c)/2,cy:(b+d)/2,w:c-a,h:d-b};
+  }
+  function centerView(){
+    const bb=contentBBox(), vs=viewSize();
+    const cx=bb?bb.cx:0, cy=bb?bb.cy:0;
+    cam.x=cx-vs.w/2; cam.y=cy-vs.h/2; applyCamera();
+  }
+  function fitView(){
+    const bb=contentBBox();
+    if(!bb){ cam.scale=1; centerView(); return; }
+    const pad=90;
+    const sx=wrap.clientWidth/(bb.w+pad*2), sy=wrap.clientHeight/(bb.h+pad*2);
+    cam.scale=Math.max(MIN_SCALE,Math.min(MAX_SCALE, Math.min(sx,sy)));
+    const vs=viewSize(); cam.x=bb.cx-vs.w/2; cam.y=bb.cy-vs.h/2; applyCamera();
+  }
+  function zoomAt(clientX,clientY,factor){
+    const r=svg.getBoundingClientRect();
+    const bx=cam.x+(clientX-r.left)/cam.scale, by=cam.y+(clientY-r.top)/cam.scale;
+    cam.scale=Math.max(MIN_SCALE,Math.min(MAX_SCALE, cam.scale*factor));
+    cam.x=bx-(clientX-r.left)/cam.scale; cam.y=by-(clientY-r.top)/cam.scale;
+    applyCamera();
+  }
+  function startPan(e){
+    e.preventDefault(); closeMenu&&closeMenu();
+    wrap.classList.add("panning");
+    let lx=e.clientX, ly=e.clientY;
+    function move(ev){ cam.x-=(ev.clientX-lx)/cam.scale; cam.y-=(ev.clientY-ly)/cam.scale; lx=ev.clientX; ly=ev.clientY; applyCamera(); }
+    function up(){ document.removeEventListener("mousemove",move); document.removeEventListener("mouseup",up); wrap.classList.remove("panning"); }
+    document.addEventListener("mousemove",move); document.addEventListener("mouseup",up);
+  }
+
+  // ---------- state ----------
+  let nodes=[]; // {id,type,x,y,label,deceased}
+  let edges=[]; // {id,from,to,type}
+  let selection=null;         // {kind:'node'|'edge', id} — primary selection (drives the panel)
+  let selectedIds=new Set();  // set of node ids for multi-select / group move
+  let colorDefs=[];           // [{id,color,label}] user-defined color key
+  let defaultColors={};       // {male,female,unknown} -> default fill for new symbols
+  let uid=1;
+  const newId=()=> "e"+(uid++)+"_"+Math.random().toString(36).slice(2,6);
+
+  const state={ snap:true, showGrid:true, pendingRel:null };
+
+  // ---------- symbol definitions (standard kinship notation) ----------
+  const PERSON_TYPES={
+    male:{label:"Male",draw:drawTriangle},
+    female:{label:"Female",draw:drawCircle},
+    unknown:{label:"Unknown sex",draw:drawSquare}
+  };
+
+  const REL_TYPES={
+    marriage:{label:"Marriage",style:"marriage"},
+    partner:{label:"Partnership",style:"partner"},
+    parent:{label:"Parent → child",style:"parent"},
+    sibling:{label:"Sibling",style:"sibling"}
+  };
+
+  // ---------- palette build ----------
+  const palette=document.getElementById("palette");
+  Object.entries(PERSON_TYPES).forEach(([key,def])=>{
+    const chip=document.createElement("div");
+    chip.className="chip"; chip.dataset.type=key;
+    const mini=miniSymbol(key);
+    chip.appendChild(mini);
+    const s=document.createElement("span"); s.textContent=def.label; chip.appendChild(s);
+    chip.addEventListener("mousedown",e=>{ if(e.button!==0) return; e.preventDefault(); startPaletteDrag(key,e); });
+    chip.addEventListener("contextmenu",e=>{ e.preventDefault(); e.stopPropagation(); openShapeMenu(key,e.clientX,e.clientY); });
+    palette.appendChild(chip);
+  });
+
+  const REL_HOTKEY={marriage:"M",partner:"P"};
+  const relList=document.getElementById("relList");
+  Object.entries(REL_TYPES).forEach(([key,def])=>{
+    const b=document.createElement("button");
+    b.className="rel-btn"; b.dataset.rel=key;
+    const g=document.createElement("span"); g.className="glyph"; g.innerHTML=relGlyph(key);
+    b.appendChild(g);
+    const t=document.createElement("span"); t.textContent=def.label; t.style.flex="1"; b.appendChild(t);
+    if(REL_HOTKEY[key]){ const kk=document.createElement("kbd"); kk.textContent=REL_HOTKEY[key]; kk.className="hotkey"; b.appendChild(kk); }
+    b.addEventListener("click",()=>toggleRel(key));
+    relList.appendChild(b);
+  });
+
+  function relGlyph(key){
+    const w=34;
+    let inner="";
+    if(key==="marriage") inner='<line x1="2" y1="4" x2="32" y2="4" stroke="#334155" stroke-width="2"/><line x1="2" y1="8" x2="32" y2="8" stroke="#334155" stroke-width="2"/>';
+    else if(key==="partner") inner='<line x1="2" y1="6" x2="32" y2="6" stroke="#334155" stroke-width="2" stroke-dasharray="4 3"/>';
+    else if(key==="divorce") inner='<line x1="2" y1="6" x2="32" y2="6" stroke="#334155" stroke-width="2"/><line x1="15" y1="1" x2="19" y2="11" stroke="#334155" stroke-width="2"/><line x1="19" y1="1" x2="23" y2="11" stroke="#334155" stroke-width="2"/>';
+    else if(key==="parent") inner='<line x1="17" y1="1" x2="17" y2="11" stroke="#334155" stroke-width="2"/><path d="M13 8 L17 12 L21 8" fill="none" stroke="#334155" stroke-width="2"/>';
+    else if(key==="sibling") inner='<line x1="6" y1="1" x2="6" y2="6" stroke="#334155" stroke-width="2"/><line x1="28" y1="1" x2="28" y2="6" stroke="#334155" stroke-width="2"/><line x1="6" y1="6" x2="28" y2="6" stroke="#334155" stroke-width="2"/>';
+    return '<svg width="'+w+'" height="12" style="position:absolute;top:-6px;left:0">'+inner+'</svg>';
+  }
+
+  function miniSymbol(key){
+    const def=PERSON_TYPES[key];
+    const s=document.createElementNS(SVGNS,"svg");
+    s.setAttribute("width","36"); s.setAttribute("height","36"); s.setAttribute("viewBox","0 0 36 36");
+    const g=document.createElementNS(SVGNS,"g");
+    def.draw(g,18,18,13);
+    if(def.deceased) addDeceased(g,18,18,13);
+    s.appendChild(g);
+    return s;
+  }
+
+  // ---------- shape drawing ----------
+  function drawSquare(parent,cx,cy,r){
+    const el=document.createElementNS(SVGNS,"rect");
+    el.setAttribute("x",cx-r); el.setAttribute("y",cy-r);
+    el.setAttribute("width",r*2); el.setAttribute("height",r*2);
+    styleShape(el); parent.appendChild(el);
+  }
+  function drawCircle(parent,cx,cy,r){
+    const el=document.createElementNS(SVGNS,"circle");
+    el.setAttribute("cx",cx); el.setAttribute("cy",cy); el.setAttribute("r",r);
+    styleShape(el); parent.appendChild(el);
+  }
+  function drawDiamond(parent,cx,cy,r){
+    const el=document.createElementNS(SVGNS,"polygon");
+    el.setAttribute("points",[[cx,cy-r],[cx+r,cy],[cx,cy+r],[cx-r,cy]].map(p=>p.join(",")).join(" "));
+    styleShape(el); parent.appendChild(el);
+  }
+  function drawTriangle(parent,cx,cy,r){
+    const el=document.createElementNS(SVGNS,"polygon");
+    el.setAttribute("points",[[cx,cy-r],[cx+r,cy+r],[cx-r,cy+r]].map(p=>p.join(",")).join(" "));
+    styleShape(el); parent.appendChild(el);
+  }
+  function styleShape(el){ el.setAttribute("fill","#ffffff"); el.setAttribute("stroke","var(--line)"); el.setAttribute("stroke-width","2.2"); el.setAttribute("class","sym"); }
+  function addDeceased(parent,cx,cy,r){
+    const d=r*0.95;
+    const l=document.createElementNS(SVGNS,"line");
+    l.setAttribute("x1",cx-d); l.setAttribute("y1",cy-d);
+    l.setAttribute("x2",cx+d); l.setAttribute("y2",cy+d);
+    l.setAttribute("stroke","var(--line)"); l.setAttribute("stroke-width","2.2");
+    parent.appendChild(l);
+  }
+
+  // ---------- grid ----------
+  function buildDefs(){
+    const defs=document.createElementNS(SVGNS,"defs");
+    const pat=document.createElementNS(SVGNS,"pattern");
+    pat.setAttribute("id","gridPat"); pat.setAttribute("width",GRID); pat.setAttribute("height",GRID);
+    pat.setAttribute("patternUnits","userSpaceOnUse");
+    const p=document.createElementNS(SVGNS,"path");
+    p.setAttribute("d","M "+GRID+" 0 L 0 0 0 "+GRID);
+    p.setAttribute("fill","none"); p.setAttribute("stroke","#e3e6ea"); p.setAttribute("stroke-width","1");
+    pat.appendChild(p); defs.appendChild(pat);
+    return defs;
+  }
+
+  // ---------- layers ----------
+  let gLayerGrid, gLayerEdges, gLayerNodes;
+  function initSvg(){
+    svg.innerHTML="";
+    svg.appendChild(buildDefs());
+    gLayerGrid=document.createElementNS(SVGNS,"g");
+    const bg=document.createElementNS(SVGNS,"rect");
+    bg.setAttribute("id","bgRect"); bg.setAttribute("fill","#ffffff"); gLayerGrid.appendChild(bg);
+    const grid=document.createElementNS(SVGNS,"rect");
+    grid.setAttribute("fill","url(#gridPat)"); grid.setAttribute("id","gridRect"); gLayerGrid.appendChild(grid);
+    gLayerEdges=document.createElementNS(SVGNS,"g");
+    gLayerNodes=document.createElementNS(SVGNS,"g");
+    svg.appendChild(gLayerGrid); svg.appendChild(gLayerEdges); svg.appendChild(gLayerNodes);
+    document.getElementById("gridRect").style.display=state.showGrid?"":"none";
+    // right-drag on empty space pans; left-drag draws a marquee to select
+    bg.addEventListener("mousedown",onEmptyDown);
+    grid.addEventListener("mousedown",onEmptyDown);
+    applyCamera();
+  }
+  function onEmptyDown(e){
+    if(e.button===2){ startPan(e); return; }                 // right-drag = pan
+    if(e.button!==0) return;
+    if(!state.pendingRel && !e.shiftKey) startMarquee(e);
+  }
+
+  // ---------- marquee (drag-box) selection ----------
+  function startMarquee(e){
+    const start=clientToSvg(e.clientX,e.clientY);
+    const box=document.createElementNS(SVGNS,"rect");
+    box.setAttribute("fill","rgba(37,99,235,0.10)");
+    box.setAttribute("stroke","var(--accent)"); box.setAttribute("stroke-width","1.4"); box.setAttribute("stroke-dasharray","5 4");
+    box.setAttribute("vector-effect","non-scaling-stroke");
+    box.style.pointerEvents="none"; gLayerNodes.appendChild(box);
+    let moved=false;
+    function rectOf(p){ return {x:Math.min(start.x,p.x), y:Math.min(start.y,p.y), w:Math.abs(p.x-start.x), h:Math.abs(p.y-start.y)}; }
+    function move(ev){
+      const p=clientToSvg(ev.clientX,ev.clientY);
+      if(!moved && Math.hypot(ev.clientX-e.clientX,ev.clientY-e.clientY)<4) return;
+      moved=true;
+      const r=rectOf(p);
+      box.setAttribute("x",r.x); box.setAttribute("y",r.y); box.setAttribute("width",r.w); box.setAttribute("height",r.h);
+    }
+    function up(ev){
+      document.removeEventListener("mousemove",move); document.removeEventListener("mouseup",up);
+      box.remove();
+      if(!moved){ select(null); return; }         // plain click on empty => clear
+      const p=clientToSvg(ev.clientX,ev.clientY); const r=rectOf(p);
+      const hits=nodes.filter(n=> n.x>=r.x && n.x<=r.x+r.w && n.y>=r.y && n.y<=r.y+r.h).map(n=>n.id);
+      if(hits.length) selectMarquee(hits); else select(null);
+    }
+    document.addEventListener("mousemove",move); document.addEventListener("mouseup",up);
+  }
+  function deleteSelectedNodes(){
+    const ids=selectedIds;
+    nodes=nodes.filter(n=>!ids.has(n.id));
+    const removedUnion=[];
+    edges=edges.filter(e=>{
+      if(e.type==="parent"){
+        if(ids.has(e.to)) return false;
+        if(e.srcKind==="node"&&ids.has(e.src)) return false;
+        return true;
+      }
+      const touch=ids.has(e.from)||ids.has(e.to);
+      if(touch) removedUnion.push(e.id);
+      return !touch;
+    });
+    edges=edges.filter(e=>!(e.type==="parent"&&e.srcKind==="edge"&&removedUnion.indexOf(e.src)>=0));
+    selectedIds=new Set(); selection=null; render();
+  }
+
+  // ---------- coordinate helpers ----------
+  function clientToSvg(clientX,clientY){
+    const r=svg.getBoundingClientRect();
+    return { x: cam.x + (clientX-r.left)/cam.scale, y: cam.y + (clientY-r.top)/cam.scale };
+  }
+  function snap(v){ return state.snap ? Math.round(v/GRID)*GRID : v; }
+
+  // ---------- click vs double-click timing ----------
+  const DOUBLE_MS=260;
+  const clickTimers={};
+  function clickOrDouble(id,singleFn,doubleFn){
+    if(clickTimers[id]){                      // second click within threshold => double
+      clearTimeout(clickTimers[id]); delete clickTimers[id];
+      if(doubleFn) doubleFn();
+      return;
+    }
+    clickTimers[id]=setTimeout(()=>{ delete clickTimers[id]; singleFn(); },DOUBLE_MS);
+  }
+
+  // ---------- render ----------
+  function render(){
+    // non-parent edges drawn individually
+    gLayerEdges.innerHTML="";
+    edges.forEach(ed=>{
+      if(ed.type==="parent") return;
+      const a=nodes.find(n=>n.id===ed.from), b=nodes.find(n=>n.id===ed.to);
+      if(!a||!b) return;
+      gLayerEdges.appendChild(buildEdge(ed,a,b));
+    });
+    // parent/descent lines drawn as grouped sibling buses hanging from union lines
+    renderParentGroups();
+    // nodes
+    gLayerNodes.innerHTML="";
+    nodes.forEach(n=> gLayerNodes.appendChild(buildNode(n)) );
+    document.getElementById("countNodes").textContent=nodes.length;
+    document.getElementById("countEdges").textContent=edges.length;
+    updateSelPanel();
+  }
+
+  // ---------- parent / descent rendering ----------
+  function mkLine(x1,y1,x2,y2){
+    const l=document.createElementNS(SVGNS,"line");
+    l.setAttribute("x1",x1); l.setAttribute("y1",y1); l.setAttribute("x2",x2); l.setAttribute("y2",y2);
+    l.setAttribute("stroke","var(--line)"); l.setAttribute("stroke-width","2.2");
+    return l;
+  }
+  // where a parent link starts: the midpoint of a union line, or the bottom of a single parent
+  function parentAnchor(ed){
+    if(ed.srcKind==="node"){
+      const n=nodes.find(x=>x.id===ed.src); if(!n) return null;
+      return {x:n.x, y:n.y+NODE/2};
+    }
+    const ce=edges.find(x=>x.id===ed.src); if(!ce) return null;
+    const a=nodes.find(n=>n.id===ce.from), b=nodes.find(n=>n.id===ce.to);
+    if(!a||!b) return null;
+    return {x:(a.x+b.x)/2, y:(a.y+b.y)/2};
+  }
+  function renderParentGroups(){
+    const groups={};
+    edges.forEach(ed=>{
+      if(ed.type!=="parent") return;
+      const child=nodes.find(n=>n.id===ed.to); if(!child) return;
+      const anchor=parentAnchor(ed); if(!anchor) return;
+      const key=ed.srcKind+":"+ed.src;
+      (groups[key]=groups[key]||{anchor,items:[]}).items.push({ed,child});
+    });
+    Object.keys(groups).forEach(k=> gLayerEdges.appendChild(buildParentGroup(groups[k])) );
+  }
+  function buildParentGroup(g){
+    const grp=document.createElementNS(SVGNS,"g");
+    const sx=g.anchor.x, sy=g.anchor.y;
+    const childTop=Math.min.apply(null,g.items.map(i=>i.child.y-NODE/2));
+    let busY=childTop-26;
+    if(busY<=sy+8) busY=(sy+childTop)/2;      // keep the bus below the source
+    const xs=g.items.map(i=>i.child.x).concat([sx]);
+    const minX=Math.min.apply(null,xs), maxX=Math.max.apply(null,xs);
+    grp.appendChild(mkLine(sx,sy,sx,busY));                   // drop from union line
+    if(maxX>minX) grp.appendChild(mkLine(minX,busY,maxX,busY)); // horizontal sibling bus
+    g.items.forEach(({ed,child})=>{                           // one drop per child (selectable)
+      const cx=child.x, top=child.y-NODE/2;
+      const seg=document.createElementNS(SVGNS,"g");
+      seg.dataset.id=ed.id; seg.dataset.kind="edge"; seg.style.cursor="pointer";
+      const hit=mkLine(cx,busY,cx,top); hit.setAttribute("stroke","transparent"); hit.setAttribute("stroke-width","14"); seg.appendChild(hit);
+      if(selection&&selection.kind==="edge"&&selection.id===ed.id){
+        const hl=mkLine(cx,busY,cx,top); hl.setAttribute("stroke","var(--accent)"); hl.setAttribute("stroke-width","3.5"); hl.setAttribute("opacity","0.35"); seg.appendChild(hl);
+      }
+      seg.appendChild(mkLine(cx,busY,cx,top));
+      seg.addEventListener("mousedown",e=>{ if(e.button!==0) return; e.stopPropagation(); if(state.pendingRel) return; select({kind:"edge",id:ed.id}); });
+      seg.addEventListener("contextmenu",e=>{ e.preventDefault(); e.stopPropagation(); if(state.pendingRel) return; openEdgeMenu(ed,e.clientX,e.clientY); });
+      grp.appendChild(seg);
+    });
+    return grp;
+  }
+
+  function buildEdge(ed,a,b){
+    const g=document.createElementNS(SVGNS,"g");
+    g.dataset.id=ed.id; g.dataset.kind="edge"; g.style.cursor="pointer";
+    const ax=a.x,ay=a.y,bx=b.x,by=b.y;
+    const stroke="var(--line)";
+    const seg=[];
+    if(ed.type==="sibling"){
+      const topY=Math.min(ay,by)-28;
+      seg.push(line(ax,ay,ax,topY),line(bx,by,bx,topY),line(ax,topY,bx,topY));
+    } else if(ed.type==="marriage"){
+      seg.push(line(ax,ay,bx,by,{off:-3}),line(ax,ay,bx,by,{off:3}));
+      if(ed.divorced){
+        // single slash through the midpoint
+        const mx=(ax+bx)/2,my=(ay+by)/2;
+        const ang=Math.atan2(by-ay,bx-ax);
+        const nx=Math.cos(ang+Math.PI/2), ny=Math.sin(ang+Math.PI/2);
+        const tx=Math.cos(ang), ty=Math.sin(ang);
+        seg.push(line(mx-nx*10-tx*6,my-ny*10-ty*6,mx+nx*10+tx*6,my+ny*10+ty*6));
+      }
+    } else if(ed.type==="partner"){
+      seg.push(line(ax,ay,bx,by,{dash:"7 5"}));
+    }
+    // hit line (invisible, wide) for selection
+    const hit=line(ax,ay,bx,by,{});
+    hit.setAttribute("stroke","transparent"); hit.setAttribute("stroke-width","14");
+    g.appendChild(hit);
+    seg.forEach(s=>{ s.setAttribute("stroke",stroke); if(!s.getAttribute("stroke-width")) s.setAttribute("stroke-width","2.2"); g.appendChild(s); });
+    if(selection&&selection.kind==="edge"&&selection.id===ed.id){
+      const hl=line(ax,ay,bx,by,{});
+      hl.setAttribute("stroke","var(--accent)"); hl.setAttribute("stroke-width","3.5"); hl.setAttribute("opacity","0.35");
+      g.insertBefore(hl,g.firstChild.nextSibling);
+    }
+    g.addEventListener("mousedown",e=>{
+      if(e.button!==0) return;
+      e.stopPropagation();
+      if(state.pendingRel){
+        if(state.pendingRel==="parent" && (ed.type==="marriage"||ed.type==="partner")) onRelPick({kind:"edge",id:ed.id});
+        else showHint("For a parent link, click the couple’s union line");
+        return;
+      }
+      // Shift+drag from a union line to a person => that person becomes a child
+      if(e.shiftKey && (ed.type==="marriage"||ed.type==="partner")){
+        e.preventDefault();
+        startConnectDrag({kind:"edge",id:ed.id,x:(ax+bx)/2,y:(ay+by)/2},e);
+        return;
+      }
+      select({kind:"edge",id:ed.id});
+    });
+    g.addEventListener("contextmenu",e=>{ e.preventDefault(); e.stopPropagation(); if(state.pendingRel) return; openEdgeMenu(ed,e.clientX,e.clientY); });
+    return g;
+
+    function line(x1,y1,x2,y2,opt){
+      opt=opt||{};
+      const l=document.createElementNS(SVGNS,"line");
+      let ox=0,oy=0;
+      if(opt.off){ const ang=Math.atan2(y2-y1,x2-x1); ox=Math.cos(ang+Math.PI/2)*opt.off; oy=Math.sin(ang+Math.PI/2)*opt.off; }
+      l.setAttribute("x1",x1+ox); l.setAttribute("y1",y1+oy);
+      l.setAttribute("x2",x2+ox); l.setAttribute("y2",y2+oy);
+      if(opt.dash) l.setAttribute("stroke-dasharray",opt.dash);
+      return l;
+    }
+  }
+
+  function buildNode(n){
+    const def=PERSON_TYPES[n.type]||PERSON_TYPES.unknown;
+    const g=document.createElementNS(SVGNS,"g");
+    g.setAttribute("class","node"+(selectedIds.has(n.id)?" selected":""));
+    g.setAttribute("transform","translate("+n.x+","+n.y+")");
+    g.dataset.id=n.id; g.dataset.kind="node"; g.style.cursor="grab";
+    // selection box
+    const sel=document.createElementNS(SVGNS,"rect");
+    sel.setAttribute("class","selbox");
+    sel.setAttribute("x",-NODE/2-7); sel.setAttribute("y",-NODE/2-7);
+    sel.setAttribute("width",NODE+14); sel.setAttribute("height",NODE+14);
+    sel.setAttribute("rx",8); sel.setAttribute("fill","none");
+    sel.setAttribute("stroke","var(--accent)"); sel.setAttribute("stroke-width","1.6"); sel.setAttribute("stroke-dasharray","5 4");
+    g.appendChild(sel);
+    // shape
+    const r=NODE/2;
+    def.draw(g,0,0,r);
+    if(n.color){ const s=g.querySelector(".sym"); if(s) s.setAttribute("fill",n.color); }
+    if(n.deceased) addDeceased(g,0,0,r);
+    // label below
+    if(n.label){
+      const t=document.createElementNS(SVGNS,"text");
+      t.setAttribute("x",0); t.setAttribute("y",r+18); t.setAttribute("text-anchor","middle");
+      t.setAttribute("font-size","14"); t.setAttribute("fill","#1f2933");
+      t.textContent=n.label; g.appendChild(t);
+    }
+    // interactions
+    g.addEventListener("mousedown",e=>onNodeDown(e,n));
+    g.addEventListener("contextmenu",e=>{ e.preventDefault(); e.stopPropagation(); if(state.pendingRel) return; openNodeMenu(n,e.clientX,e.clientY); });
+    return g;
+  }
+
+  // ---------- selection ----------
+  // keeps selectedIds in sync: node selection => that one node; edge or null => no multi-set
+  function select(sel){
+    selection=sel;
+    if(sel && sel.kind==="node") selectedIds=new Set([sel.id]);
+    else selectedIds=new Set();
+    render();
+  }
+  function selectMarquee(ids){
+    selectedIds=new Set(ids);
+    selection = ids.length===1 ? {kind:"node",id:ids[0]} : null;
+    render();
+  }
+  function updateSelPanel(){
+    const p=document.getElementById("selPanel");
+    if(selectedIds.size>1){
+      p.innerHTML="<div style='color:var(--ink);margin-bottom:8px'><b>"+selectedIds.size+" people selected</b><br><span style='color:var(--muted)'>drag any of them to move together</span></div>";
+      if(colorDefs.length){ const l=document.createElement("div"); l.style.cssText="margin:6px 0 0;color:var(--muted);font-size:11px"; l.textContent="Apply color:"; p.appendChild(l); p.appendChild(swatchStrip()); }
+      p.appendChild(mkBtn("Delete selected",()=>deleteSelectedNodes(),true));
+      p.appendChild(mkBtn("Clear selection",()=>select(null)));
+      return;
+    }
+    if(!selection){ p.textContent="Nothing selected."; return; }
+    if(selection.kind==="node"){
+      const n=nodes.find(x=>x.id===selection.id); if(!n){p.textContent="Nothing selected.";return;}
+      p.innerHTML="";
+      const title=document.createElement("div"); title.style.color="var(--ink)"; title.style.marginBottom="8px";
+      title.innerHTML="<b>"+(n.label||"(unnamed)")+"</b><br><span style='color:var(--muted)'>"+PERSON_TYPES[n.type].label+"</span>";
+      p.appendChild(title);
+      p.appendChild(mkBtn("Rename / edit",()=>editLabel(n)));
+      p.appendChild(mkBtn(n.deceased?"Mark living":"Mark deceased",()=>toggleDeceased(n)));
+      if(colorDefs.length){ const l=document.createElement("div"); l.style.cssText="margin:6px 0 0;color:var(--muted);font-size:11px"; l.textContent="Color:"; p.appendChild(l); p.appendChild(swatchStrip()); }
+      p.appendChild(mkBtn("Delete person",()=>deleteNode(n.id),true));
+    } else {
+      const ed=edges.find(x=>x.id===selection.id); if(!ed){p.textContent="Nothing selected.";return;}
+      const relName=REL_TYPES[ed.type].label+(ed.type==="marriage"&&ed.divorced?" (divorced)":"");
+      p.innerHTML="<div style='color:var(--ink);margin-bottom:8px'><b>"+relName+"</b></div>";
+      if(ed.type==="marriage") p.appendChild(mkBtn(ed.divorced?"Remove divorce slash":"Mark divorced",()=>{ ed.divorced=!ed.divorced; render(); }));
+      p.appendChild(mkBtn("Delete link",()=>deleteEdge(ed.id),true));
+    }
+  }
+  function mkBtn(txt,fn,danger){
+    const b=document.createElement("button");
+    b.textContent=txt; b.style.cssText="display:block;width:100%;margin:5px 0;padding:7px 9px;border-radius:7px;border:1px solid "+(danger?"#f0c2c2":"var(--border)")+";background:#fff;cursor:pointer;font-size:12.5px;text-align:left;color:"+(danger?"var(--danger)":"var(--ink)");
+    b.addEventListener("click",fn); return b;
+  }
+
+  function toggleDeceased(n){ n.deceased=!n.deceased; render(); }
+
+  // ---------- colors ----------
+  const COLOR_PALETTE=["#e11d48","#2563eb","#16a34a","#d97706","#7c3aed","#0891b2","#db2777","#65a30d"];
+  function renderColors(){
+    const wrap=document.getElementById("colorList");
+    wrap.innerHTML="";
+    colorDefs.forEach(c=>{
+      const row=document.createElement("div"); row.className="color-row";
+      const ci=document.createElement("input"); ci.type="color"; ci.value=c.color;
+      ci.addEventListener("input",()=>{ const old=c.color; c.color=ci.value; nodes.forEach(n=>{ if(n.color===old) n.color=c.color; }); render(); });
+      const ti=document.createElement("input"); ti.type="text"; ti.value=c.label; ti.placeholder="Label";
+      ti.addEventListener("input",()=>{ c.label=ti.value; });
+      const del=document.createElement("button"); del.className="del"; del.textContent="×"; del.title="Remove color";
+      del.addEventListener("click",()=>{
+        const inUse=nodes.filter(n=>n.color===c.color).length;
+        if(inUse>0){
+          const name=c.label?('“'+c.label+'”'):"this color";
+          if(!window.confirm(name+" is applied to "+inUse+" "+(inUse===1?"person":"people")+". Remove it and clear their color?")) return;
+        }
+        nodes.forEach(n=>{ if(n.color===c.color) n.color=undefined; });
+        colorDefs=colorDefs.filter(x=>x.id!==c.id); renderColors(); render();
+      });
+      row.appendChild(ci); row.appendChild(ti); row.appendChild(del); wrap.appendChild(row);
+    });
+  }
+  function addColor(){
+    colorDefs.push({id:newId(),color:COLOR_PALETTE[colorDefs.length%COLOR_PALETTE.length],label:""});
+    renderColors();
+  }
+  function applyColorToSelection(color){
+    if(selectedIds.size===0){ showHint("Select one or more people first"); return; }
+    selectedIds.forEach(id=>{ const n=nodes.find(x=>x.id===id); if(n) n.color=color; });
+    render();
+  }
+  function swatchStrip(){
+    const wrap=document.createElement("div"); wrap.className="swatch-strip";
+    colorDefs.forEach(c=>{ const s=document.createElement("div"); s.className="swatch"; s.style.background=c.color; s.title=c.label||c.color; s.addEventListener("click",()=>applyColorToSelection(c.color)); wrap.appendChild(s); });
+    const none=document.createElement("div"); none.className="swatch none"; none.title="No color"; none.addEventListener("click",()=>applyColorToSelection(undefined)); wrap.appendChild(none);
+    return wrap;
+  }
+
+  // ---------- shift-drag to connect ----------
+  function nodeAt(x,y){
+    for(let i=nodes.length-1;i>=0;i--){ const n=nodes[i]; if(Math.abs(x-n.x)<=NODE/2 && Math.abs(y-n.y)<=NODE/2) return n; }
+    return null;
+  }
+  function addMarriageBetween(a,b){
+    if(edges.some(e=>(e.type==="marriage"||e.type==="partner")&&((e.from===a&&e.to===b)||(e.from===b&&e.to===a)))){ showHint("Those two are already linked"); return; }
+    edges.push({id:newId(),type:"marriage",from:a,to:b}); showHint("Marriage added");
+  }
+  function addChildFromUnion(edgeId,childId){
+    const ce=edges.find(e=>e.id===edgeId); if(!ce) return;
+    if(ce.from===childId||ce.to===childId){ showHint("A partner can’t be their own child"); return; }
+    if(edges.some(e=>e.type==="parent"&&e.srcKind==="edge"&&e.src===edgeId&&e.to===childId)){ showHint("Already a child of this couple"); return; }
+    edges.push({id:newId(),type:"parent",srcKind:"edge",src:edgeId,to:childId}); showHint("Child added");
+  }
+  function startConnectDrag(src,e){
+    const rb=document.createElementNS(SVGNS,"line");
+    rb.setAttribute("x1",src.x); rb.setAttribute("y1",src.y); rb.setAttribute("x2",src.x); rb.setAttribute("y2",src.y);
+    rb.setAttribute("stroke","var(--accent)"); rb.setAttribute("stroke-width","2.5"); rb.setAttribute("stroke-dasharray","6 5");
+    rb.style.pointerEvents="none"; gLayerNodes.appendChild(rb);
+    showHint(src.kind==="node" ? "Drop on a person, or empty space, to add a spouse" : "Drop on a person, or empty space, to add a child");
+    function move(ev){
+      const p=clientToSvg(ev.clientX,ev.clientY);
+      rb.setAttribute("x2",p.x); rb.setAttribute("y2",p.y);
+    }
+    function up(ev){
+      document.removeEventListener("mousemove",move); document.removeEventListener("mouseup",up);
+      rb.remove();
+      const p=clientToSvg(ev.clientX,ev.clientY);
+      const t=nodeAt(p.x,p.y);
+      if(t){
+        if(src.kind==="node"){ if(t.id!==src.id) addMarriageBetween(src.id,t.id); else showHint("Drop on a different person"); }
+        else addChildFromUnion(src.id,t.id);
+      } else {
+        connectToNewShape(src, p.x, p.y, ev.clientX, ev.clientY);
+      }
+      render();
+    }
+    document.addEventListener("mousemove",move); document.addEventListener("mouseup",up);
+  }
+  // Shift on a person: a plain shift-click toggles it in the selection; a shift-drag onto another person marries them
+  function startShiftNode(e,n){
+    const startX=e.clientX, startY=e.clientY; let mode=null, rb=null;
+    function move(ev){
+      if(mode===null && Math.hypot(ev.clientX-startX,ev.clientY-startY)>=4){
+        mode="connect";
+        rb=document.createElementNS(SVGNS,"line");
+        rb.setAttribute("x1",n.x); rb.setAttribute("y1",n.y); rb.setAttribute("x2",n.x); rb.setAttribute("y2",n.y);
+        rb.setAttribute("stroke","var(--accent)"); rb.setAttribute("stroke-width","2.5"); rb.setAttribute("stroke-dasharray","6 5"); rb.style.pointerEvents="none";
+        gLayerNodes.appendChild(rb);
+        showHint("Drop on a person, or empty space, to add a spouse");
+      }
+      if(mode==="connect"){ const p=clientToSvg(ev.clientX,ev.clientY); rb.setAttribute("x2",p.x); rb.setAttribute("y2",p.y); }
+    }
+    function up(ev){
+      document.removeEventListener("mousemove",move); document.removeEventListener("mouseup",up);
+      if(mode==="connect"){
+        if(rb) rb.remove();
+        const p=clientToSvg(ev.clientX,ev.clientY); const t=nodeAt(p.x,p.y);
+        if(t){ if(t.id!==n.id) addMarriageBetween(n.id,t.id); }
+        else connectToNewShape({kind:"node",id:n.id}, p.x, p.y, ev.clientX, ev.clientY);
+        render();
+      }
+      else toggleInSelection(n.id);
+    }
+    document.addEventListener("mousemove",move); document.addEventListener("mouseup",up);
+  }
+  function toggleInSelection(id){
+    if(selectedIds.has(id)) selectedIds.delete(id); else selectedIds.add(id);
+    selection = selectedIds.size===1 ? {kind:"node",id:[...selectedIds][0]} : null;
+    render();
+  }
+
+  // ---------- right-click context menu ----------
+  let ctxMenuEl=null;
+  function closeMenu(){ if(ctxMenuEl){ ctxMenuEl.remove(); ctxMenuEl=null; document.removeEventListener("mousedown",onDocDown,true); document.removeEventListener("keydown",onMenuKey,true); } }
+  function onDocDown(e){ if(ctxMenuEl && !ctxMenuEl.contains(e.target)) closeMenu(); }
+  function onMenuKey(e){ if(e.key==="Escape") closeMenu(); }
+  function openMenu(x,y,items){
+    closeMenu();
+    const m=document.createElement("div"); m.className="ctx-menu";
+    items.forEach(it=>{
+      if(it.sep){ const s=document.createElement("div"); s.className="sep"; m.appendChild(s); return; }
+      if(it.header){ const h=document.createElement("div"); h.className="hdr"; h.textContent=it.header; m.appendChild(h); return; }
+      const row=document.createElement("div"); row.className="mi"+(it.danger?" danger":"");
+      if("swatch" in it){ const sw=document.createElement("span"); sw.className="sw"+(it.swatch?"":" none"); if(it.swatch) sw.style.background=it.swatch; row.appendChild(sw); }
+      if(it.iconNode) row.appendChild(it.iconNode);
+      const lb=document.createElement("span"); lb.textContent=it.label; row.appendChild(lb);
+      row.addEventListener("click",()=>{ closeMenu(); if(it.onClick) it.onClick(); });
+      m.appendChild(row);
+    });
+    document.body.appendChild(m);
+    const vw=window.innerWidth, vh=window.innerHeight, rect=m.getBoundingClientRect();
+    let px=x, py=y;
+    if(px+rect.width>vw-6) px=Math.max(6,vw-rect.width-6);
+    if(py+rect.height>vh-6) py=Math.max(6,vh-rect.height-6);
+    m.style.left=px+"px"; m.style.top=py+"px";
+    ctxMenuEl=m;
+    setTimeout(()=>{ document.addEventListener("mousedown",onDocDown,true); document.addEventListener("keydown",onMenuKey,true); },0);
+  }
+  function openNodeMenu(n,x,y){
+    let targets;
+    if(selectedIds.has(n.id) && selectedIds.size>1) targets=[...selectedIds];
+    else { select({kind:"node",id:n.id}); targets=[n.id]; }
+    const setAll=fn=>{ targets.forEach(id=>{ const z=nodes.find(q=>q.id===id); if(z) fn(z); }); render(); };
+    const anyDeceased=targets.some(id=>{ const z=nodes.find(q=>q.id===id); return z&&z.deceased; });
+    const items=[];
+    items.push({label: anyDeceased?"Remove deceased slash":"Add deceased slash", onClick:()=>setAll(z=>z.deceased=!anyDeceased)});
+    items.push({sep:true});
+    items.push({header: colorDefs.length? "Color" : "Color (add some in the sidebar)"});
+    colorDefs.forEach(c=> items.push({swatch:c.color, label:c.label||c.color, onClick:()=>setAll(z=>z.color=c.color)}));
+    items.push({swatch:null, label:"No color", onClick:()=>setAll(z=>z.color=undefined)});
+    items.push({sep:true});
+    if(targets.length===1) items.push({label:"Rename…", onClick:()=>editLabel(nodes.find(q=>q.id===n.id))});
+    items.push({label: targets.length>1?"Delete selected":"Delete person", danger:true, onClick:()=> targets.length>1? deleteSelectedNodes(): deleteNode(n.id)});
+    openMenu(x,y,items);
+  }
+  function openEdgeMenu(ed,x,y){
+    select({kind:"edge",id:ed.id});
+    const items=[];
+    if(ed.type==="marriage"){ items.push({label: ed.divorced?"Remove divorce slash":"Add divorce slash", onClick:()=>{ ed.divorced=!ed.divorced; render(); }}); items.push({sep:true}); }
+    items.push({label:"Delete link", danger:true, onClick:()=>deleteEdge(ed.id)});
+    openMenu(x,y,items);
+  }
+  // right-click a palette shape to set the default fill color for new people of that type
+  function openShapeMenu(type,x,y){
+    const items=[{header:"Default color · "+PERSON_TYPES[type].label}];
+    if(!colorDefs.length) items.push({label:"Add colors in the sidebar first"});
+    colorDefs.forEach(c=> items.push({swatch:c.color, label:c.label||c.color, onClick:()=>{ defaultColors[type]=c.color; refreshPaletteColors(); }}));
+    items.push({swatch:null, label:"No default", onClick:()=>{ delete defaultColors[type]; refreshPaletteColors(); }});
+    openMenu(x,y,items);
+  }
+  function refreshPaletteColors(){
+    document.querySelectorAll("#palette .chip").forEach(chip=>{
+      const sym=chip.querySelector(".sym");
+      if(sym) sym.setAttribute("fill", defaultColors[chip.dataset.type]||"#ffffff");
+    });
+  }
+  function menuShapeIcon(key){
+    const s=document.createElementNS(SVGNS,"svg"); s.setAttribute("width","20"); s.setAttribute("height","20"); s.setAttribute("viewBox","0 0 20 20");
+    const g=document.createElementNS(SVGNS,"g"); PERSON_TYPES[key].draw(g,10,10,7);
+    g.querySelectorAll(".sym").forEach(x=>{ x.setAttribute("stroke","#334155"); x.setAttribute("fill", defaultColors[key]||"#ffffff"); });
+    s.appendChild(g); return s;
+  }
+  // shift-drag ended on empty space: ask which shape to create, then connect it to the source
+  function connectToNewShape(src,worldX,worldY,clientX,clientY){
+    const wx=snap(worldX), wy=snap(worldY);
+    const items=[{header: src.kind==="node" ? "Add spouse — pick a shape" : "Add child — pick a shape"}];
+    Object.keys(PERSON_TYPES).forEach(key=>{
+      items.push({ iconNode:menuShapeIcon(key), label:PERSON_TYPES[key].label, onClick:()=>{
+        const n=addNode(key,wx,wy);
+        if(src.kind==="node") addMarriageBetween(src.id,n.id); else addChildFromUnion(src.id,n.id);
+        render();
+      }});
+    });
+    openMenu(clientX,clientY,items);
+  }
+
+  // ---------- node dragging ----------
+  function onNodeDown(e,n){
+    if(e.button!==0) return;   // ignore right/middle clicks (right-click opens the context menu)
+    e.stopPropagation();
+    if(state.pendingRel){ onRelPick({kind:"node",id:n.id}); return; }
+    // Shift: click toggles this person in the selection; drag onto another person marries them
+    if(e.shiftKey){ e.preventDefault(); startShiftNode(e,n); return; }
+    // if the grabbed node is part of a multi-selection, drag the whole group; otherwise select just it
+    const inGroup = selectedIds.has(n.id) && selectedIds.size>1;
+    if(!inGroup) select({kind:"node",id:n.id});
+    const movers=[...selectedIds];                       // ids to move together (just [n.id] when single)
+    const startClientX=e.clientX, startClientY=e.clientY;
+    const cursorStart=clientToSvg(e.clientX,e.clientY);
+    const starts={}; movers.forEach(id=>{ const m=nodes.find(x=>x.id===id); if(m) starts[id]={x:m.x,y:m.y}; });
+    const grab=starts[n.id]||{x:n.x,y:n.y};
+    let moved=false;
+    function move(ev){
+      if(!moved && Math.hypot(ev.clientX-startClientX,ev.clientY-startClientY)<4) return;
+      moved=true;
+      const cur=clientToSvg(ev.clientX,ev.clientY);
+      // snap the grabbed node under the cursor, move the rest by the same delta
+      const gx=snap(grab.x+(cur.x-cursorStart.x)), gy=snap(grab.y+(cur.y-cursorStart.y));
+      const ddx=gx-grab.x, ddy=gy-grab.y;
+      movers.forEach(id=>{ const m=nodes.find(x=>x.id===id); if(!m) return;
+        m.x=starts[id].x+ddx; m.y=starts[id].y+ddy; });
+      render();
+    }
+    function up(){
+      document.removeEventListener("mousemove",move); document.removeEventListener("mouseup",up);
+      if(!moved){
+        if(inGroup){ select({kind:"node",id:n.id}); }   // click within a group => pick just that one
+        else { clickOrDouble(n.id, ()=>{}, ()=>editLabel(n)); }  // single = select only; double = rename
+      }
+    }
+    document.addEventListener("mousemove",move); document.addEventListener("mouseup",up);
+  }
+
+  // ---------- drag from palette with live snapped preview ----------
+  let previewG=null;
+  function startPaletteDrag(type,e){
+    if(state.pendingRel) cancelRel();
+    let inside=false, px=0, py=0;
+    // build a ghost preview node
+    previewG=document.createElementNS(SVGNS,"g");
+    previewG.setAttribute("opacity","0.55");
+    previewG.style.pointerEvents="none";
+    PERSON_TYPES[type].draw(previewG,0,0,NODE/2);
+    previewG.style.display="none";
+    gLayerNodes.appendChild(previewG);
+    showHint("Drop on the grid to place");
+
+    function move(ev){
+      const r=svg.getBoundingClientRect();
+      inside = ev.clientX>=r.left && ev.clientX<=r.right && ev.clientY>=r.top && ev.clientY<=r.bottom;
+      if(!inside){ previewG.style.display="none"; return; }
+      const p=clientToSvg(ev.clientX,ev.clientY);
+      px=snap(p.x); py=snap(p.y);
+      previewG.setAttribute("transform","translate("+px+","+py+")");
+      previewG.style.display="";
+    }
+    function up(ev){
+      document.removeEventListener("mousemove",move);
+      document.removeEventListener("mouseup",up);
+      if(previewG){ previewG.remove(); previewG=null; }
+      if(inside){ addNode(type,px,py); }
+    }
+    document.addEventListener("mousemove",move);
+    document.addEventListener("mouseup",up);
+  }
+
+  function addNode(type,x,y){
+    const n={id:newId(),type,x,y,label:"",deceased:false,color:defaultColors[type]};
+    nodes.push(n); select({kind:"node",id:n.id}); render();
+    showHint("Double-click the symbol to add a name");
+    return n;
+  }
+  function deleteNode(id){
+    nodes=nodes.filter(n=>n.id!==id);
+    const removedUnion=[];
+    edges=edges.filter(e=>{
+      if(e.type==="parent"){
+        if(e.to===id) return false;                    // child removed
+        if(e.srcKind==="node"&&e.src===id) return false; // single parent removed
+        return true;
+      }
+      const touch=(e.from===id||e.to===id);
+      if(touch) removedUnion.push(e.id);
+      return !touch;
+    });
+    // drop parent links whose union line no longer exists
+    edges=edges.filter(e=>!(e.type==="parent"&&e.srcKind==="edge"&&removedUnion.indexOf(e.src)>=0));
+    selectedIds.delete(id);
+    if(selection&&selection.id===id) selection=null;
+    render();
+  }
+  function deleteEdge(id){
+    edges=edges.filter(e=>e.id!==id && !(e.type==="parent"&&e.srcKind==="edge"&&e.src===id));
+    if(selection&&selection.id===id) selection=null; render();
+  }
+
+  // ---------- relationships ----------
+  function toggleRel(key){
+    if(state.pendingRel===key){ cancelRel(); return; }
+    state.pendingRel=key; state.relFirst=null;
+    document.querySelectorAll(".rel-btn").forEach(b=>b.classList.toggle("active",b.dataset.rel===key));
+    document.getElementById("app").classList.add("connect-mode");
+    showHint(key==="parent"
+      ? "Click the couple’s union line (or a single parent), then the child"
+      : "Click the first person for “"+REL_TYPES[key].label+"”");
+  }
+  function cancelRel(){
+    state.pendingRel=null; state.relFirst=null;
+    document.querySelectorAll(".rel-btn").forEach(b=>b.classList.remove("active"));
+    document.getElementById("app").classList.remove("connect-mode");
+    render();
+  }
+  // first pick may be a person, or (for parent links) a union line; second pick is always a person
+  function onRelPick(target){
+    const key=state.pendingRel;
+    if(!state.relFirst){
+      if(key!=="parent" && target.kind!=="node"){ showHint("Pick a person"); return; }
+      state.relFirst=target;
+      select(target);
+      showHint(key==="parent" ? "Now click the child" : "Now click the second person");
+      return;
+    }
+    if(target.kind!=="node"){ showHint("Now click the child"); return; }
+    const first=state.relFirst;
+    if(first.kind==="node" && first.id===target.id){ showHint("Pick a different person"); return; }
+    if(key==="parent"){
+      if(edges.some(e=>e.type==="parent"&&e.srcKind===first.kind&&e.src===first.id&&e.to===target.id)){
+        showHint("That child is already linked here"); cancelRel(); return;
+      }
+      edges.push({id:newId(),type:"parent",srcKind:first.kind,src:first.id,to:target.id});
+    } else {
+      edges.push({id:newId(),type:key,from:first.id,to:target.id});
+    }
+    showHint(REL_TYPES[key].label+" added");
+    cancelRel();
+  }
+
+  // ---------- inline label editor ----------
+  function editLabel(n){
+    const name=window.prompt("Name / label (shown below the symbol):", n.label||"");
+    if(name!==null) n.label=name.trim();
+    render();
+  }
+
+  // ---------- hint ----------
+  let hintTimer=null;
+  function showHint(msg){
+    hint.textContent=msg; hint.classList.add("show");
+    clearTimeout(hintTimer); hintTimer=setTimeout(()=>hint.classList.remove("show"),2200);
+  }
+
+  // ---------- toolbar ----------
+  document.getElementById("snapToggle").addEventListener("change",e=>state.snap=e.target.checked);
+  document.getElementById("gridToggle").addEventListener("change",e=>{
+    state.showGrid=e.target.checked;
+    const gr=document.getElementById("gridRect"); if(gr) gr.style.display=state.showGrid?"":"none";
+  });
+  document.getElementById("btnClear").addEventListener("click",()=>{
+    if(nodes.length&&!window.confirm("Clear the whole chart?")) return;
+    nodes=[]; edges=[]; selection=null; selectedIds=new Set(); render();
+  });
+  document.getElementById("btnSample").addEventListener("click",loadSample);
+  document.getElementById("btnAddColor").addEventListener("click",addColor);
+
+  // help / instructions modal
+  const helpModal=document.getElementById("helpModal");
+  const openHelp=()=>helpModal.classList.add("open");
+  const closeHelp=()=>helpModal.classList.remove("open");
+  document.getElementById("btnHelp").addEventListener("click",openHelp);
+  document.getElementById("helpClose").addEventListener("click",closeHelp);
+  helpModal.addEventListener("mousedown",e=>{ if(e.target===helpModal) closeHelp(); });
+  document.addEventListener("keydown",e=>{ if(e.key==="Escape" && helpModal.classList.contains("open")){ closeHelp(); e.stopPropagation(); } },true);
+
+  // keyboard
+  document.addEventListener("keydown",e=>{
+    if(e.target.tagName==="INPUT"||e.target.tagName==="TEXTAREA") return;
+    if(e.key==="Escape"){ if(state.pendingRel) cancelRel(); else select(null); }
+    if(e.code==="Space"){ e.preventDefault(); centerView(); }
+    else if(e.key==="Enter"){ e.preventDefault(); fitView(); }
+    if(e.key==="Delete"||e.key==="Backspace"){
+      if(selectedIds.size>1){ e.preventDefault(); deleteSelectedNodes(); }
+      else if(selection){ e.preventDefault(); if(selection.kind==="node") deleteNode(selection.id); else deleteEdge(selection.id); }
+    }
+    if(!e.ctrlKey&&!e.metaKey&&!e.altKey){
+      const k=e.key.toLowerCase();
+      if(k==="m"){ e.preventDefault(); toggleRel("marriage"); }
+      else if(k==="p"){ e.preventDefault(); toggleRel("partner"); }
+    }
+  });
+
+  // suppress the browser context menu everywhere except inside the side panel
+  document.addEventListener("contextmenu",e=>{ if(e.target.closest && e.target.closest(".sidebar")) return; e.preventDefault(); });
+
+  // wheel zooms the canvas (centered on the cursor); window resize keeps the view consistent
+  wrap.addEventListener("wheel",e=>{ e.preventDefault(); zoomAt(e.clientX,e.clientY, Math.exp(-e.deltaY*0.0015)); },{passive:false});
+  window.addEventListener("resize",applyCamera);
+
+  // ---------- JSON save / load ----------
+  document.getElementById("btnSaveJson").addEventListener("click",()=>{
+    const data=JSON.stringify({version:1,grid:GRID,nodes,edges,colors:colorDefs,defaults:defaultColors},null,2);
+    const blob=new Blob([data],{type:"application/json"});
+    downloadBlob(blob,"kinship-chart.json");
+  });
+  document.getElementById("btnLoadJson").addEventListener("click",()=>document.getElementById("fileInput").click());
+  document.getElementById("fileInput").addEventListener("change",e=>{
+    const f=e.target.files[0]; if(!f) return;
+    const rd=new FileReader();
+    rd.onload=()=>{
+      try{
+        const d=migrateChart(JSON.parse(rd.result));
+        nodes=d.nodes; edges=d.edges; colorDefs=d.colors; defaultColors=d.defaults;
+        selection=null; selectedIds=new Set(); renderColors(); refreshPaletteColors(); render(); fitView();
+        showHint(d.migrated ? "Older chart imported and updated" : "Chart loaded");
+      }catch(err){ alert("Could not read that file: "+err.message); }
+    };
+    rd.readAsText(f); e.target.value="";
+  });
+
+  // accept charts saved by older versions (old symbol types, age field, parent from/to, etc.)
+  function migrateChart(d){
+    let migrated=false;
+    const rawNodes=Array.isArray(d.nodes)?d.nodes:[];
+    const TYPE_MAP={ male:"male", female:"female", unknown:"unknown",
+      maleDeceased:"male", femaleDeceased:"female", pregnancy:"unknown", diamond:"unknown", square:"unknown", circle:"female" };
+    const nodes=rawNodes.map(n=>{
+      const o={ id:n.id, x:+n.x||0, y:+n.y||0, label:n.label||"", deceased:!!n.deceased, color:n.color };
+      let t=n.type;
+      if(!PERSON_TYPES[t]){                       // unknown/legacy symbol type
+        if(t==="maleDeceased"||t==="femaleDeceased") o.deceased=true;
+        t=TYPE_MAP[t]||"unknown"; migrated=true;
+      }
+      o.type=t;
+      if("sub" in n) migrated=true;               // old age/id field is dropped
+      return o;
+    });
+    const rawEdges=Array.isArray(d.edges)?d.edges:[];
+    const edges=rawEdges.map(ed=>{
+      if(ed.type==="parent" && !("srcKind" in ed)){   // legacy: parent stored as from -> to
+        migrated=true;
+        return { id:ed.id||newId(), type:"parent", srcKind:"node", src:ed.from, to:ed.to };
+      }
+      return Object.assign({}, ed, { id:ed.id||newId() });
+    }).filter(ed=> ed.type==="parent" ? (ed.src&&ed.to) : (ed.from&&ed.to));
+    return {
+      nodes, edges,
+      colors: Array.isArray(d.colors)?d.colors:[],
+      defaults: (d.defaults&&typeof d.defaults==="object")?d.defaults:{},
+      migrated
+    };
+  }
+
+  // ---------- legend (only what's actually used) ----------
+  function legendItems(){
+    const items=[];
+    const usedTypes=new Set(nodes.map(n=>n.type));
+    const TL={male:"Male",female:"Female",unknown:"Unknown sex"};
+    ["male","female","unknown"].forEach(t=>{ if(usedTypes.has(t)) items.push({kind:"icon",type:t,label:TL[t]}); });
+    if(nodes.some(n=>n.deceased)) items.push({kind:"deceased",label:"Deceased"});
+    const et=new Set(edges.map(e=>e.type));
+    if(et.has("marriage")) items.push({kind:"line",line:"marriage",label:"Marriage"});
+    if(edges.some(e=>e.type==="marriage"&&e.divorced)) items.push({kind:"line",line:"divorce",label:"Divorce / separation"});
+    if(et.has("partner")) items.push({kind:"line",line:"partner",label:"Partnership"});
+    if(et.has("parent")) items.push({kind:"line",line:"parent",label:"Parent–child"});
+    if(et.has("sibling")) items.push({kind:"line",line:"sibling",label:"Siblings"});
+    colorDefs.forEach(c=>{ if(nodes.some(n=>n.color===c.color)) items.push({kind:"color",color:c.color,label:c.label||c.color}); });
+    return items;
+  }
+  function legendGlyph(type,cx,cy,r){
+    const gg=document.createElementNS(SVGNS,"g");
+    PERSON_TYPES[type].draw(gg,cx,cy,r);
+    gg.querySelectorAll(".sym").forEach(s=>{ s.setAttribute("stroke","#334155"); s.setAttribute("fill","#ffffff"); });
+    return gg;
+  }
+  function slashConcrete(parent,cx,cy,r){
+    const d=r*0.95, l=document.createElementNS(SVGNS,"line");
+    l.setAttribute("x1",cx-d); l.setAttribute("y1",cy-d); l.setAttribute("x2",cx+d); l.setAttribute("y2",cy+d);
+    l.setAttribute("stroke","#334155"); l.setAttribute("stroke-width","2"); parent.appendChild(l);
+  }
+  function legendLine(kind,x1,cy,x2){
+    const g=document.createElementNS(SVGNS,"g"), C="#334155", mid=(x1+x2)/2;
+    const mk=(a,b,c,d,dash)=>{ const l=document.createElementNS(SVGNS,"line"); l.setAttribute("x1",a);l.setAttribute("y1",b);l.setAttribute("x2",c);l.setAttribute("y2",d); l.setAttribute("stroke",C);l.setAttribute("stroke-width","2"); if(dash)l.setAttribute("stroke-dasharray",dash); g.appendChild(l); };
+    if(kind==="marriage"){ mk(x1,cy-3,x2,cy-3); mk(x1,cy+3,x2,cy+3); }
+    else if(kind==="divorce"){ mk(x1,cy-3,x2,cy-3); mk(x1,cy+3,x2,cy+3); mk(mid-6,cy+8,mid+6,cy-8); }
+    else if(kind==="partner"){ mk(x1,cy,x2,cy,"5 3"); }
+    else if(kind==="parent"){ mk(mid,cy-9,mid,cy-2); mk(x1+5,cy-2,x2-5,cy-2); mk(x1+5,cy-2,x1+5,cy+6); mk(x2-5,cy-2,x2-5,cy+6); }
+    else if(kind==="sibling"){ mk(x1+5,cy-8,x1+5,cy-1); mk(x2-5,cy-8,x2-5,cy-1); mk(x1+5,cy-1,x2-5,cy-1); }
+    return g;
+  }
+  function buildLegend(){
+    const items=legendItems(); if(!items.length) return null;
+    const PAD=16, RH=28, TITLE=28, GW=46, WIDTH=250;
+    const h=PAD*2+TITLE+items.length*RH;
+    const g=document.createElementNS(SVGNS,"g");
+    const bg=document.createElementNS(SVGNS,"rect");
+    bg.setAttribute("x",0); bg.setAttribute("y",0); bg.setAttribute("width",WIDTH); bg.setAttribute("height",h);
+    bg.setAttribute("rx",10); bg.setAttribute("fill","#ffffff"); bg.setAttribute("stroke","#d7dbe0"); bg.setAttribute("stroke-width","1.5");
+    g.appendChild(bg);
+    const title=document.createElementNS(SVGNS,"text");
+    title.setAttribute("x",PAD); title.setAttribute("y",PAD+15); title.setAttribute("font-size","16"); title.setAttribute("font-weight","700"); title.setAttribute("fill","#1f2933");
+    title.textContent="Legend"; g.appendChild(title);
+    let y=PAD+TITLE;
+    items.forEach(it=>{
+      const cy=y+RH/2-2, cx=PAD+GW/2;
+      if(it.kind==="icon"){ g.appendChild(legendGlyph(it.type,cx,cy,9)); }
+      else if(it.kind==="deceased"){ const gg=legendGlyph("female",cx,cy,9); slashConcrete(gg,cx,cy,9); g.appendChild(gg); }
+      else if(it.kind==="line"){ g.appendChild(legendLine(it.line,PAD,cy,PAD+GW-6)); }
+      else if(it.kind==="color"){ const sw=document.createElementNS(SVGNS,"rect"); sw.setAttribute("x",cx-9);sw.setAttribute("y",cy-9);sw.setAttribute("width",18);sw.setAttribute("height",18);sw.setAttribute("rx",4); sw.setAttribute("fill",it.color); sw.setAttribute("stroke","#334155"); sw.setAttribute("stroke-width","1"); g.appendChild(sw); }
+      const t=document.createElementNS(SVGNS,"text");
+      t.setAttribute("x",PAD+GW+8); t.setAttribute("y",cy+4); t.setAttribute("font-size","13"); t.setAttribute("fill","#1f2933");
+      t.textContent=it.label; g.appendChild(t);
+      y+=RH;
+    });
+    return {g,w:WIDTH,h};
+  }
+
+  // ---------- PNG export ----------
+  document.getElementById("btnPng").addEventListener("click",exportPng);
+  function exportPng(){
+    if(nodes.length===0){ showHint("Add some people first"); return; }
+    // compute bounding box with padding
+    const pad=60;
+    let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+    nodes.forEach(n=>{ minX=Math.min(minX,n.x-NODE); minY=Math.min(minY,n.y-NODE);
+      maxX=Math.max(maxX,n.x+NODE); maxY=Math.max(maxY,n.y+NODE+22); });
+    edges.forEach(ed=>{ const a=nodes.find(n=>n.id===ed.from),b=nodes.find(n=>n.id===ed.to); if(a&&b){
+      minX=Math.min(minX,a.x,b.x); minY=Math.min(minY,a.y,b.y,Math.min(a.y,b.y)-30);
+      maxX=Math.max(maxX,a.x,b.x); maxY=Math.max(maxY,a.y,b.y); }});
+    minX-=pad;minY-=pad;maxX+=pad;maxY+=pad;
+
+    // optional legend, placed in a column to the left of the chart
+    const L = document.getElementById("legendToggle").checked ? buildLegend() : null;
+    let legX, legY;
+    if(L){
+      const gap=44;
+      legX = minX - L.w - gap;
+      legY = minY + pad*0.4;
+      minX = legX - 20;
+      if(legY + L.h + 20 > maxY) maxY = legY + L.h + 20;
+    }
+    const bw=maxX-minX, bh=maxY-minY;
+
+    // clone svg, strip selection styling + grid, resolve CSS var colors
+    const clone=svg.cloneNode(true);
+    clone.querySelectorAll(".selbox").forEach(el=>el.remove());
+    const gr=clone.querySelector("#gridRect"); if(gr&&!state.showGrid) gr.remove();
+    // background + grid rects follow the camera on screen; resize them to cover the exported area
+    [clone.querySelector("#bgRect"), (state.showGrid?gr:null)].forEach(el=>{ if(el){ el.setAttribute("x",minX); el.setAttribute("y",minY); el.setAttribute("width",maxX-minX); el.setAttribute("height",maxY-minY); } });
+    // replace var(--line) etc. with concrete colors
+    clone.querySelectorAll("*").forEach(el=>{
+      ["stroke","fill"].forEach(attr=>{
+        const v=el.getAttribute(attr);
+        if(v&&v.indexOf("var(")===0){
+          el.setAttribute(attr, v.indexOf("--line")>=0?"#334155":v.indexOf("--accent")>=0?"#2563eb":"#334155");
+        }
+      });
+    });
+    if(L){ L.g.setAttribute("transform","translate("+legX+","+legY+")"); clone.appendChild(L.g); }
+    clone.setAttribute("viewBox",minX+" "+minY+" "+bw+" "+bh);
+    clone.setAttribute("width",bw); clone.setAttribute("height",bh);
+
+    const xml=new XMLSerializer().serializeToString(clone);
+    const svgBlob=new Blob(['<?xml version="1.0" encoding="UTF-8"?>'+xml],{type:"image/svg+xml;charset=utf-8"});
+    const url=URL.createObjectURL(svgBlob);
+    const img=new Image();
+    const scale=2;
+    img.onload=()=>{
+      const canvas=document.createElement("canvas");
+      canvas.width=bw*scale; canvas.height=bh*scale;
+      const ctx=canvas.getContext("2d");
+      ctx.fillStyle="#ffffff"; ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.drawImage(img,0,0,canvas.width,canvas.height);
+      URL.revokeObjectURL(url);
+      canvas.toBlob(b=>{ downloadBlob(b,"kinship-chart.png"); showHint("PNG exported"); },"image/png");
+    };
+    img.onerror=()=>{ URL.revokeObjectURL(url); alert("Export failed while rendering the image."); };
+    img.src=url;
+  }
+
+  function downloadBlob(blob,name){
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob); a.download=name;
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },100);
+  }
+
+  // ---------- sample chart ----------
+  function loadSample(){
+    nodes=[]; edges=[]; selection=null;
+    const gp1=addQuiet("male",600,240,"William");
+    const gp2=addQuiet("female",744,240,"Margaret",true);
+    const fa=addQuiet("male",528,480,"David");
+    const mo=addQuiet("female",672,480,"Susan");
+    const un=addQuiet("male",840,480,"Robert");
+    const c1=addQuiet("female",456,720,"Emma");
+    const c2=addQuiet("male",600,720,"James");
+    const c3=addQuiet("unknown",744,720,"Alex");
+    const mW={id:newId(),from:gp1.id,to:gp2.id,type:"marriage"}; edges.push(mW);
+    const mD={id:newId(),from:fa.id,to:mo.id,type:"marriage",divorced:true}; edges.push(mD);
+    // children descend from the couples' union lines
+    edges.push({id:newId(),type:"parent",srcKind:"edge",src:mW.id,to:fa.id});
+    edges.push({id:newId(),type:"parent",srcKind:"edge",src:mW.id,to:un.id});
+    edges.push({id:newId(),type:"parent",srcKind:"edge",src:mD.id,to:c1.id});
+    edges.push({id:newId(),type:"parent",srcKind:"edge",src:mD.id,to:c2.id});
+    edges.push({id:newId(),type:"parent",srcKind:"edge",src:mD.id,to:c3.id});
+    render(); fitView(); showHint("Sample family loaded — edit or clear it");
+    function addQuiet(type,x,y,label,dec){ const n={id:newId(),type,x,y,label,deceased:!!dec}; nodes.push(n); return n; }
+  }
+
+  // ---------- boot ----------
+  initSvg();
+  renderColors();
+  refreshPaletteColors();
+  render();
+  centerView();
+})();
+</script>
+</body>
+</html>
