@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Kinship Chart Builder</title>
+<title>Kinship Chart Creator</title>
 <style>
   :root{
     --bg:#f4f5f7; --panel:#ffffff; --ink:#1f2933; --muted:#6b7280;
@@ -90,17 +90,31 @@
   .modal .row .k{flex:0 0 178px;color:var(--ink);font-weight:600}
   .modal .row .v{flex:1;color:#374151;line-height:1.4}
   .modal kbd{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;background:#f1f3f5;border:1px solid var(--border);border-radius:4px;padding:1px 5px;white-space:nowrap}
+  .modal .mbody p{font-size:13.5px;line-height:1.5;color:#374151;margin:0 0 10px}
+  .modal .mbody a{color:var(--accent);text-decoration:none}
+  .modal .mbody a:hover{text-decoration:underline}
+  .modal .lic-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin:6px 0 4px}
+  .modal .lic-grid h4{margin:0 0 4px;font-size:12px}
+  .modal .lic-grid ul{margin:0;padding-left:16px;font-size:12.5px;color:#374151;line-height:1.5}
+  .modal .lic-grid .perm h4{color:#16a34a}
+  .modal .lic-grid .cond h4{color:#2563eb}
+  .modal .lic-grid .lim h4{color:#dc2626}
+  .modal .gh{display:inline-flex;align-items:center;gap:7px;margin-top:6px;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px}
+  .modal .gh:hover{background:#f7faff;border-color:var(--accent);text-decoration:none}
+  .modal hr{border:none;border-top:1px solid var(--border);margin:16px 0}
+  .modal .notice{background:#f7f8fa;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12.5px;line-height:1.5;color:#374151}
 </style>
 </head>
 <body>
 <div id="app">
   <header>
     <div>
-      <h1>Kinship Chart Builder</h1>
+      <h1>Kinship Chart Creator</h1>
       <div class="sub">Drag symbols onto the grid · double-click to name · right-click for slash/color/delete · Shift+click to multi-select · Shift+drag person→person = marriage · Shift+drag a union line→person = child</div>
     </div>
     <div class="toolbar">
       <button class="tb" id="btnHelp" title="Instructions &amp; controls">? Instructions</button>
+      <button class="tb" id="btnLicense" title="License">License</button>
       <label class="toggle"><input type="checkbox" id="snapToggle" checked> Snap to grid</label>
       <label class="toggle"><input type="checkbox" id="gridToggle" checked> Show grid</label>
       <button class="tb" id="btnSample">Load sample</button>
@@ -153,7 +167,7 @@
 <div class="modal-overlay" id="helpModal">
   <div class="modal" role="dialog" aria-modal="true" aria-label="Instructions and controls">
     <div class="mhead">
-      <h2>How to use the Kinship Chart Builder</h2>
+      <h2>How to use the Kinship Chart Creator</h2>
       <button class="mclose" id="helpClose" title="Close" aria-label="Close">×</button>
     </div>
     <div class="mbody">
@@ -167,7 +181,7 @@
       <div class="row"><div class="k">Using the buttons</div><div class="v">Click a relationship (or press <kbd>M</kbd> marriage, <kbd>P</kbd> partnership), then click the two people. For <b>Parent → child</b>, click the couple's union line (or a single parent), then the child.</div></div>
       <div class="row"><div class="k">Shift-drag to connect</div><div class="v"><kbd>Shift</kbd>+drag one person onto another = marriage. <kbd>Shift</kbd>+drag a union line onto a person = child.</div></div>
       <div class="row"><div class="k">Shift-drag to empty</div><div class="v"><kbd>Shift</kbd>+drag to blank space and pick a shape — it's created there and connected (spouse from a person, child from a union line).</div></div>
-      <div class="row"><div class="k">Divorce</div><div class="v">Right-click a marriage line → <b>Add divorce slash</b> (double line with a slash).</div></div>
+      <div class="row"><div class="k">Divorce / separation</div><div class="v">Right-click a marriage line → <b>Add divorce slash</b>, or a partnership line → <b>Add separation slash</b> (useful for former partners shown only to establish a child's parentage).</div></div>
       <div class="row"><div class="k">Delete a link</div><div class="v">Right-click any line → <b>Delete link</b>.</div></div>
 
       <h3>Selecting &amp; moving</h3>
@@ -189,6 +203,52 @@
       <h3>Saving &amp; exporting</h3>
       <div class="row"><div class="k">Keep editing later</div><div class="v"><b>Save JSON</b> downloads the whole chart; <b>Load JSON</b> restores it (colors and defaults included).</div></div>
       <div class="row"><div class="k">Export image</div><div class="v"><b>Export PNG</b> saves a high-resolution image cropped to your chart, with the legend if enabled.</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="licenseModal">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="License">
+    <div class="mhead">
+      <h2>License</h2>
+      <button class="mclose" id="licenseClose" title="Close" aria-label="Close">×</button>
+    </div>
+    <div class="mbody">
+      <p><b>Kinship Chart Creator</b><br>Copyright &copy; 2026 Tanner McGill</p>
+      <div class="notice">
+        This program is free software: you can redistribute it and/or modify it under the terms of the
+        <b>GNU General Public License</b> as published by the Free Software Foundation, either version 3 of
+        the License, or (at your option) any later version.<br><br>
+        This program is distributed in the hope that it will be useful, but <b>WITHOUT ANY WARRANTY</b>;
+        without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+        GNU General Public License for more details.<br><br>
+        You should have received a copy of the GNU General Public License along with this program.
+        If not, see &lt;<a href="https://www.gnu.org/licenses/" target="_blank" rel="noopener">https://www.gnu.org/licenses/</a>&gt;.
+      </div>
+
+      <h3>What GPL-3.0 means</h3>
+      <div class="lic-grid">
+        <div class="perm">
+          <h4>Permissions</h4>
+          <ul><li>Commercial use</li><li>Modification</li><li>Distribution</li><li>Patent use</li><li>Private use</li></ul>
+        </div>
+        <div class="cond">
+          <h4>Conditions</h4>
+          <ul><li>Disclose source</li><li>License &amp; copyright notice</li><li>Same license</li><li>State changes</li></ul>
+        </div>
+        <div class="lim">
+          <h4>Limitations</h4>
+          <ul><li>No liability</li><li>No warranty</li></ul>
+        </div>
+      </div>
+      <p style="font-size:12.5px;color:var(--muted)">In short: you may use, study, share, and modify this software freely. If you distribute it or a modified version, you must keep it under GPL-3.0, provide the source, and state your changes. It comes with no warranty. This summary is not a substitute for the full license.</p>
+      <p><a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" rel="noopener">Read the full GNU General Public License v3.0 &rarr;</a></p>
+
+      <hr>
+      <a class="gh" href="https://github.com/TanMcGi/KinshipChartCreator" target="_blank" rel="noopener" aria-label="GitHub repository">
+        <svg width="18" height="18" viewBox="0 0 16 16" fill="#1f2933" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        github.com/TanMcGi/KinshipChartCreator
+      </a>
     </div>
   </div>
 </div>
@@ -556,6 +616,13 @@
       }
     } else if(ed.type==="partner"){
       seg.push(line(ax,ay,bx,by,{dash:"7 5"}));
+      if(ed.divorced){
+        const mx=(ax+bx)/2,my=(ay+by)/2;
+        const ang=Math.atan2(by-ay,bx-ax);
+        const nx=Math.cos(ang+Math.PI/2), ny=Math.sin(ang+Math.PI/2);
+        const tx=Math.cos(ang), ty=Math.sin(ang);
+        seg.push(line(mx-nx*10-tx*6,my-ny*10-ty*6,mx+nx*10+tx*6,my+ny*10+ty*6));
+      }
     }
     // hit line (invisible, wide) for selection
     const hit=line(ax,ay,bx,by,{});
@@ -665,9 +732,11 @@
       p.appendChild(mkBtn("Delete person",()=>deleteNode(n.id),true));
     } else {
       const ed=edges.find(x=>x.id===selection.id); if(!ed){p.textContent="Nothing selected.";return;}
-      const relName=REL_TYPES[ed.type].label+(ed.type==="marriage"&&ed.divorced?" (divorced)":"");
+      const suffix = ed.divorced ? (ed.type==="marriage"?" (divorced)":ed.type==="partner"?" (separated)":"") : "";
+      const relName=REL_TYPES[ed.type].label+suffix;
       p.innerHTML="<div style='color:var(--ink);margin-bottom:8px'><b>"+relName+"</b></div>";
       if(ed.type==="marriage") p.appendChild(mkBtn(ed.divorced?"Remove divorce slash":"Mark divorced",()=>{ ed.divorced=!ed.divorced; render(); }));
+      else if(ed.type==="partner") p.appendChild(mkBtn(ed.divorced?"Remove separation slash":"Mark separated",()=>{ ed.divorced=!ed.divorced; render(); }));
       p.appendChild(mkBtn("Delete link",()=>deleteEdge(ed.id),true));
     }
   }
@@ -840,6 +909,7 @@
     select({kind:"edge",id:ed.id});
     const items=[];
     if(ed.type==="marriage"){ items.push({label: ed.divorced?"Remove divorce slash":"Add divorce slash", onClick:()=>{ ed.divorced=!ed.divorced; render(); }}); items.push({sep:true}); }
+    else if(ed.type==="partner"){ items.push({label: ed.divorced?"Remove separation slash":"Add separation slash", onClick:()=>{ ed.divorced=!ed.divorced; render(); }}); items.push({sep:true}); }
     items.push({label:"Delete link", danger:true, onClick:()=>deleteEdge(ed.id)});
     openMenu(x,y,items);
   }
@@ -1045,14 +1115,18 @@
   document.getElementById("btnSample").addEventListener("click",loadSample);
   document.getElementById("btnAddColor").addEventListener("click",addColor);
 
-  // help / instructions modal
+  // instructions + license modals
   const helpModal=document.getElementById("helpModal");
-  const openHelp=()=>helpModal.classList.add("open");
-  const closeHelp=()=>helpModal.classList.remove("open");
-  document.getElementById("btnHelp").addEventListener("click",openHelp);
-  document.getElementById("helpClose").addEventListener("click",closeHelp);
-  helpModal.addEventListener("mousedown",e=>{ if(e.target===helpModal) closeHelp(); });
-  document.addEventListener("keydown",e=>{ if(e.key==="Escape" && helpModal.classList.contains("open")){ closeHelp(); e.stopPropagation(); } },true);
+  const licenseModal=document.getElementById("licenseModal");
+  const openModal=m=>m.classList.add("open");
+  const closeModals=()=>{ helpModal.classList.remove("open"); licenseModal.classList.remove("open"); };
+  document.getElementById("btnHelp").addEventListener("click",()=>openModal(helpModal));
+  document.getElementById("btnLicense").addEventListener("click",()=>openModal(licenseModal));
+  document.getElementById("helpClose").addEventListener("click",closeModals);
+  document.getElementById("licenseClose").addEventListener("click",closeModals);
+  helpModal.addEventListener("mousedown",e=>{ if(e.target===helpModal) closeModals(); });
+  licenseModal.addEventListener("mousedown",e=>{ if(e.target===licenseModal) closeModals(); });
+  document.addEventListener("keydown",e=>{ if(e.key==="Escape" && (helpModal.classList.contains("open")||licenseModal.classList.contains("open"))){ closeModals(); e.stopPropagation(); } },true);
 
   // keyboard
   document.addEventListener("keydown",e=>{
@@ -1143,6 +1217,7 @@
     if(et.has("marriage")) items.push({kind:"line",line:"marriage",label:"Marriage"});
     if(edges.some(e=>e.type==="marriage"&&e.divorced)) items.push({kind:"line",line:"divorce",label:"Divorce / separation"});
     if(et.has("partner")) items.push({kind:"line",line:"partner",label:"Partnership"});
+    if(edges.some(e=>e.type==="partner"&&e.divorced)) items.push({kind:"line",line:"partnerSlash",label:"Former partnership"});
     if(et.has("parent")) items.push({kind:"line",line:"parent",label:"Parent–child"});
     if(et.has("sibling")) items.push({kind:"line",line:"sibling",label:"Siblings"});
     colorDefs.forEach(c=>{ if(nodes.some(n=>n.color===c.color)) items.push({kind:"color",color:c.color,label:c.label||c.color}); });
@@ -1165,6 +1240,7 @@
     if(kind==="marriage"){ mk(x1,cy-3,x2,cy-3); mk(x1,cy+3,x2,cy+3); }
     else if(kind==="divorce"){ mk(x1,cy-3,x2,cy-3); mk(x1,cy+3,x2,cy+3); mk(mid-6,cy+8,mid+6,cy-8); }
     else if(kind==="partner"){ mk(x1,cy,x2,cy,"5 3"); }
+    else if(kind==="partnerSlash"){ mk(x1,cy,x2,cy,"5 3"); mk(mid-6,cy+8,mid+6,cy-8); }
     else if(kind==="parent"){ mk(mid,cy-9,mid,cy-2); mk(x1+5,cy-2,x2-5,cy-2); mk(x1+5,cy-2,x1+5,cy+6); mk(x2-5,cy-2,x2-5,cy+6); }
     else if(kind==="sibling"){ mk(x1+5,cy-8,x1+5,cy-1); mk(x2-5,cy-8,x2-5,cy-1); mk(x1+5,cy-1,x2-5,cy-1); }
     return g;
